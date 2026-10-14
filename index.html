@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Learn machine-learning models by fitting lines, growing trees, correcting errors, and projecting data. An original interactive workshop.">
+  <title>Model Workshop | Learn by changing the model</title>
+  <link rel="icon" href="data:,">
+  <script>
+    (() => {
+      const param = new URLSearchParams(window.location.search).get("scoutTheme");
+      const theme =
+        param || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      document.documentElement.setAttribute("data-theme", theme);
+    })();
+  </script>
+  <style>
+    :root {
+      color-scheme: light;
+      --cp-bg: #f7f4ef;
+      --cp-bg-elevated: #fcfbf8;
+      --cp-surface: #ffffff;
+      --cp-surface-soft: #f5f5f5;
+      --cp-border: #dedede;
+      --cp-border-strong: #919191;
+      --cp-text: #242424;
+      --cp-text-muted: #5c5c5c;
+      --cp-text-soft: #6f6f6f;
+      --cp-accent: #b11f4b;
+      --cp-accent-hover: #9a1a41;
+      --cp-accent-soft: rgba(177, 31, 75, 0.08);
+      --cp-accent-fg: #ffffff;
+      --cp-success: #16a34a;
+      --cp-danger: #dc2626;
+      --cp-warning: #f59e0b;
+      --cp-link: #0078d4;
+      --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.12);
+      --cp-overlay: rgba(255, 255, 255, 0.8);
+      --cp-panel: rgba(255, 255, 255, 0.86);
+      --cp-panel-strong: rgba(255, 255, 255, 0.96);
+      --cp-sheen: rgba(255, 255, 255, 0.55);
+      --cp-highlight: rgba(177, 31, 75, 0.12);
+    }
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --cp-bg: #3d3b3a;
+      --cp-bg-elevated: #343231;
+      --cp-surface: #292929;
+      --cp-surface-soft: #2e2e2e;
+      --cp-border: #474747;
+      --cp-border-strong: #5f5f5f;
+      --cp-text: #dedede;
+      --cp-text-muted: #919191;
+      --cp-text-soft: #b0b0b0;
+      --cp-accent: #fd8ea1;
+      --cp-accent-hover: #fb7b91;
+      --cp-accent-soft: rgba(253, 142, 161, 0.14);
+      --cp-accent-fg: #1a1a1a;
+      --cp-success: #4ade80;
+      --cp-danger: #f87171;
+      --cp-warning: #fbbf24;
+      --cp-link: #4da6ff;
+      --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+      --cp-overlay: rgba(41, 41, 41, 0.88);
+      --cp-panel: rgba(41, 41, 41, 0.72);
+      --cp-panel-strong: rgba(41, 41, 41, 0.96);
+      --cp-sheen: rgba(255, 255, 255, 0.04);
+      --cp-highlight: rgba(253, 142, 161, 0.12);
+    }
+    :root { --cp-chart-error: color-mix(in srgb, var(--cp-warning) 65%, var(--cp-text) 35%); }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--cp-surface); color: var(--cp-text); font: 16px/1.55 "Segoe UI", Aptos, Calibri, -apple-system, BlinkMacSystemFont, sans-serif; }
+    a { color: var(--cp-link); text-underline-offset: 4px; }
+    button, input, select { font: inherit; }
+    button { min-height: 44px; padding: 10px 16px; border: 1px solid var(--cp-border-strong); border-radius: 10px; background: var(--cp-surface); color: var(--cp-text); cursor: pointer; }
+    button:hover { border-color: var(--cp-accent); background: var(--cp-accent-soft); }
+    button.primary { background: var(--cp-accent); border-color: var(--cp-accent); color: var(--cp-accent-fg); font-weight: 600; }
+    button.primary:hover { background: var(--cp-accent-hover); }
+    button[aria-pressed="true"] { border-color: var(--cp-accent); background: var(--cp-accent-soft); color: var(--cp-accent); }
+    :focus-visible { outline: 3px solid var(--cp-accent); outline-offset: 4px; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { font-size: clamp(36px,4.2vw,58px); line-height: 1.06; letter-spacing: -.045em; font-weight: 650; margin-bottom: 20px; text-wrap: balance; }
+    h2 { font-size: 28px; line-height: 1.15; letter-spacing: -.025em; font-weight: 600; margin-bottom: 12px; text-wrap: balance; }
+    h3 { font-size: 17px; line-height: 1.4; font-weight: 650; margin-bottom: 8px; }
+    p { margin-bottom: 16px; }
+    .wrap { max-width: 1320px; margin: auto; padding: 0 48px; }
+    header { border-bottom: 1px solid var(--cp-border); }
+    .header { padding-top: 20px; padding-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+    .brand { display: flex; align-items: center; gap: 12px; font-size: 19px; font-weight: 650; letter-spacing: -.02em; }
+    .brand svg { color: var(--cp-accent); flex: none; }
+    .header-actions { display: flex; align-items: center; gap: 12px; }
+    .header-actions a { color: var(--cp-text-muted); font-size: 14px; padding: 12px 0; }
+    .skip { position: absolute; left: 16px; top: -120px; z-index: 2; background: var(--cp-surface); padding: 12px; }
+    .skip:focus { top: 12px; }
+    .intro { padding-top: 28px; padding-bottom: 24px; display: grid; grid-template-columns: 1.35fr 1fr; gap: 48px; align-items: center; }
+    .intro p { font-size: 19px; line-height: 1.6; color: var(--cp-text-muted); max-width: 570px; }
+    .intro-note { border-left: 3px solid var(--cp-accent); padding-left: 20px; }
+    .intro-note p { font-size: 16px; margin-bottom: 0; }
+    .intro-note b { display: block; font-size: 17px; margin-bottom: 8px; }
+    .progress { display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--cp-text-muted); margin-top: 20px; }
+    progress { width: 120px; height: 6px; accent-color: var(--cp-accent); }
+    progress::-webkit-progress-bar { background: var(--cp-border); border-radius: 4px; }
+    progress::-webkit-progress-value { background: var(--cp-accent); border-radius: 4px; }
+    .model-nav { display: grid; grid-template-columns: repeat(8,minmax(0,1fr)); gap: 8px; padding-bottom: 28px; }
+    .model-nav a { border: 1px solid var(--cp-border); color: var(--cp-text-muted); border-radius: 10px; text-decoration: none; padding: 12px; font-size: 13px; line-height: 1.4; min-height: 68px; }
+    .model-nav a b { display: block; font-weight: 650; font-size: 14px; margin-bottom: 4px; color: var(--cp-text); }
+    .model-nav a[aria-current="page"] { border-color: var(--cp-accent); background: var(--cp-accent-soft); color: var(--cp-accent); }
+    .model-nav a[aria-current="page"] b { color: var(--cp-accent); }
+    .model-nav a:hover { border-color: var(--cp-accent); }
+    .mobile-nav { display: none; }
+    .lab { border: 1px solid var(--cp-border); border-radius: 16px; overflow: hidden; }
+    .lab-top { padding: 24px 28px; border-bottom: 1px solid var(--cp-border); display: flex; justify-content: space-between; align-items: start; gap: 20px; }
+    .lab-top h2 { margin-bottom: 8px; }
+    .lab-top p { color: var(--cp-text-muted); max-width: 700px; margin: 0; font-size: 16px; }
+    .lab-index { border-radius: 50%; border: 1px solid var(--cp-border); width: 44px; height: 44px; flex: none; display: grid; place-items: center; font-size: 16px; color: var(--cp-text-muted); }
+    .lab-layout { display: grid; grid-template-columns: minmax(0,1fr) 300px; }
+    .visual { min-width: 0; padding: 24px 28px 20px; }
+    .control-panel { border-left: 1px solid var(--cp-border); background: var(--cp-surface-soft); padding: 24px; }
+    .control-panel > p { color: var(--cp-text-muted); font-size: 14px; }
+    .legend { display: flex; align-items: center; gap: 20px; font-size: 13px; color: var(--cp-text-muted); flex-wrap: wrap; margin-bottom: 16px; }
+    .legend span { display: flex; gap: 8px; align-items: center; }
+    .legend svg { width: 20px; height: 16px; }
+    .observed { fill: var(--cp-link); stroke: var(--cp-link); }
+    .predicted { fill: none; stroke: var(--cp-accent); stroke-width: 3; }
+    .error-line { stroke: var(--cp-chart-error); stroke-width: 2; stroke-dasharray: 4 3; }
+    .validation { fill: var(--cp-surface); stroke: var(--cp-text); stroke-width: 1.7; }
+    .chart { width: 100%; height: auto; display: block; }
+    .grid-line { fill: none; stroke: var(--cp-border); stroke-width: 1; }
+    .axis { fill: none; stroke: var(--cp-border-strong); stroke-width: 1.2; }
+    .axis-text { fill: var(--cp-text-muted); font: 13px "Segoe UI", Aptos, Calibri, sans-serif; }
+    .chart-label { fill: var(--cp-text); font: 600 14px "Segoe UI", Aptos, Calibri, sans-serif; }
+    .chart-caption { font-size: 13px; color: var(--cp-text-muted); margin: 16px 0 0; }
+    .metric-strip { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; border-top: 1px solid var(--cp-border); padding-top: 20px; margin-top: 20px; }
+    .metric { min-width: 0; }
+    .metric strong { display: block; font-size: 30px; line-height: 1.2; letter-spacing: -.03em; font-weight: 650; }
+    .metric span { display: block; color: var(--cp-text-muted); font-size: 13px; margin-top: 6px; }
+    .metric em { font-style: normal; font-size: 14px; font-weight: 500; }
+    .control { display: block; margin-bottom: 24px; }
+    .control .label { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 8px; font-size: 14px; font-weight: 600; }
+    output { color: var(--cp-accent); font-size: 17px; font-weight: 650; }
+    input[type="range"] { display: block; width: 100%; min-height: 36px; accent-color: var(--cp-accent); cursor: pointer; }
+    .control small { display: block; color: var(--cp-text-muted); font-size: 13px; }
+    select { width: 100%; min-height: 44px; padding: 8px; border: 1px solid var(--cp-border-strong); border-radius: 10px; color: var(--cp-text); background: var(--cp-surface); cursor: pointer; }
+    .checkbox { display: flex; align-items: center; gap: 12px; min-height: 44px; font-size: 14px; margin-bottom: 16px; }
+    .checkbox input { accent-color: var(--cp-accent); width: 20px; height: 20px; cursor: pointer; flex: none; }
+    .control-panel button { width: 100%; margin-bottom: 12px; }
+    .formula { background: var(--cp-surface); padding: 16px; border-radius: 10px; border: 1px solid var(--cp-border); font-size: 15px; margin: 16px 0; overflow-wrap: anywhere; }
+    .formula code { font: 14px/1.6 Consolas, "Courier New", Courier, monospace; }
+    .insight { padding: 20px 28px; border-top: 1px solid var(--cp-border); background: var(--cp-accent-soft); font-size: 15px; }
+    .insight p { margin: 0; max-width: 950px; }
+    .lessons-below { padding-top: 36px; }
+    .derive { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; margin-bottom: 32px; }
+    .derive p { color: var(--cp-text-muted); font-size: 16px; max-width: 600px; }
+    .derive .steps { display: grid; gap: 14px; }
+    .derive .step { display: flex; align-items: start; gap: 12px; }
+    .step > span { border: 1px solid var(--cp-border); border-radius: 50%; width: 28px; height: 28px; flex: none; display: grid; place-items: center; font-size: 13px; color: var(--cp-accent); margin-top: 2px; }
+    .step p { font-size: 15px; margin: 0; }
+    .step b { display: block; color: var(--cp-text); font-size: 15px; }
+    .quiz { background: var(--cp-surface-soft); padding: 28px; border-radius: 16px; }
+    .quiz h2 { font-size: 23px; }
+    .quiz p { font-size: 16px; }
+    .answers { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; }
+    .answers button { text-align: left; font-size: 14px; line-height: 1.6; display: flex; gap: 12px; }
+    .answers button span { color: var(--cp-text-muted); font-size: 13px; font-weight: 650; }
+    .feedback { border-left: 3px solid var(--cp-accent); padding: 12px 16px; margin-top: 20px; background: var(--cp-surface); font-size: 15px; }
+    .feedback:empty { display: none; }
+    details { border-top: 1px solid var(--cp-border); padding: 16px 0; margin-top: 24px; }
+    summary { min-height: 44px; display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 16px; font-weight: 600; }
+    summary:before { content: "+"; font-size: 22px; color: var(--cp-accent); }
+    details[open] summary:before { content: "-"; }
+    details p { color: var(--cp-text-muted); margin: 12px 0; font-size: 15px; }
+    .sources { border-top: 1px solid var(--cp-border); padding: 20px 0; color: var(--cp-text-muted); font-size: 13px; }
+    .sources a { display: inline-block; padding: 8px 0; margin-right: 20px; min-height: 44px; }
+    .lesson-footer { border-top: 1px solid var(--cp-border); padding: 24px 0 40px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .fundamentals { border: 1px solid var(--cp-border); padding: 20px; border-radius: 12px; display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 20px; }
+    .fundamentals p { margin: 8px 0 0; font-size: 14px; }
+    .loss-bars { display: flex; gap: 4px; align-items: end; height: 80px; margin-top: 12px; }
+    .loss-bars div { flex: 1; min-width: 2px; background: var(--cp-accent); border-radius: 2px 2px 0 0; }
+    .branch-diagram { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 12px; }
+    .branch-diagram div { padding: 12px 16px; border: 1px solid var(--cp-border); border-radius: 10px; font-size: 13px; background: var(--cp-surface-soft); }
+    .branch-diagram b { display: block; color: var(--cp-accent); font-size: 15px; margin-bottom: 4px; }
+    .forest-chip { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0; font-size: 13px; border-bottom: 1px solid var(--cp-border); }
+    .forest-chip b { color: var(--cp-accent); }
+    .category-board { min-height: 370px; padding-top: 8px; }
+    .data-row { display: grid; grid-template-columns: 48px 1.1fr 65px 1fr; gap: 12px; align-items: center; padding: 14px 12px; font-size: 14px; border-bottom: 1px solid var(--cp-border); }
+    .data-row.heading { color: var(--cp-text-muted); font-size: 12px; padding-top: 0; }
+    .data-row.selected { background: var(--cp-accent-soft); border-radius: 8px; border-bottom-color: var(--cp-accent); }
+    .data-row .numeric { color: var(--cp-accent); font-weight: 650; font-size: 18px; }
+    .encoded { width: 100%; height: 8px; margin-top: 4px; background: var(--cp-border); border-radius: 8px; overflow: hidden; }
+    .encoded i { display: block; height: 100%; background: var(--cp-accent); }
+    .selection-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px; }
+    .candidate { border: 1px solid var(--cp-border); padding: 20px; border-radius: 10px; }
+    .candidate h3 { font-size: 18px; margin-bottom: 8px; }
+    .candidate p { color: var(--cp-text-muted); font-size: 14px; margin-bottom: 8px; }
+    .candidate a { display: inline-block; padding: 8px 0; min-height: 44px; font-size: 14px; }
+    .path-card { padding: 16px 20px; border: 1px solid var(--cp-border); border-radius: 10px; font-size: 15px; margin-top: 16px; }
+    footer { background: var(--cp-surface-soft); border-top: 1px solid var(--cp-border); padding: 28px 0; }
+    footer p { font-size: 13px; color: var(--cp-text-muted); max-width: 850px; margin-bottom: 12px; }
+    footer a { font-size: 13px; }
+    .notice { padding: 20px; border-left: 3px solid var(--cp-danger); background: var(--cp-surface-soft); margin-bottom: 24px; }
+    html[data-theme="dark"] :is(.header-actions a,.intro p,.progress,.model-nav a:not([aria-current]),.lab-top p,.lab-index,.control-panel > p,.legend,.axis-text,.chart-caption,.metric span,.control small,.derive p,.answers button span,details p,.sources,.data-row.heading,.candidate p,footer p) { color: var(--cp-text-soft); }
+    html[data-theme="dark"] .axis-text { fill: var(--cp-text-soft); }
+    @media (max-width:1100px) {
+      .wrap { padding-left: 32px; padding-right: 32px; }
+      .intro { gap: 32px; }
+      .model-nav { grid-template-columns: repeat(4,minmax(0,1fr)); }
+      .model-nav a { min-height: 58px; }
+      .lab-layout { grid-template-columns: minmax(0,1fr) 260px; }
+      .visual { padding: 20px; }
+      .control-panel { padding: 20px; }
+      .derive { gap: 32px; }
+    }
+    @media (max-width:760px) {
+      .wrap { padding-left: 16px; padding-right: 16px; }
+      .header { padding-top: 12px; padding-bottom: 12px; gap: 12px; }
+      .brand { font-size: 17px; gap: 8px; }
+      .brand svg { width: 28px; height: 28px; }
+      .header-actions { gap: 8px; }
+      .header-actions a { display: none; }
+      .header-actions button { font-size: 13px; padding: 8px 12px; }
+      .intro { padding-top: 28px; padding-bottom: 24px; grid-template-columns: 1fr; gap: 12px; }
+      h1 { font-size: 39px; margin-bottom: 12px; }
+      .intro p { font-size: 17px; margin-bottom: 12px; }
+      .intro-note { display: none; }
+      .progress { margin-top: 12px; }
+      .model-nav { display: none; }
+      .mobile-nav { display: block; padding-bottom: 20px; }
+      .mobile-nav label { display: block; font-size: 13px; color: var(--cp-text-muted); margin-bottom: 6px; }
+      .lab-top { padding: 20px 16px; gap: 12px; }
+      .lab-top h2 { font-size: 25px; }
+      .lab-top p { font-size: 15px; }
+      .lab-index { width: 32px; height: 32px; font-size: 13px; }
+      .lab-layout { grid-template-columns: 1fr; }
+      .visual { padding: 20px 12px; }
+      .chart-caption { padding: 0 4px; }
+      .axis-text { font-size: 24px; }
+      .chart-label { font-size: 24px; }
+      .control-panel { border-left: 0; border-top: 1px solid var(--cp-border); padding: 20px; }
+      .controls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+      .control { min-width: 0; margin-bottom: 16px; }
+      .control .label { font-size: 13px; }
+      .legend { gap: 12px; font-size: 12px; }
+      .metric-strip { gap: 8px; padding-left: 4px; padding-right: 4px; }
+      .metric strong { font-size: 24px; }
+      .metric span { font-size: 12px; }
+      .metric em { font-size: 12px; }
+      .insight { padding: 20px 16px; font-size: 14px; }
+      .derive { grid-template-columns: 1fr; gap: 20px; }
+      .derive h2 { font-size: 24px; }
+      .answers { grid-template-columns: 1fr; }
+      .quiz { padding: 20px; }
+      .fundamentals { grid-template-columns: 1fr 1fr; gap: 16px; padding: 16px; }
+      .data-row { grid-template-columns: 28px 1fr 50px 1fr; gap: 8px; font-size: 12px; padding: 12px 4px; }
+      .data-row .numeric { font-size: 16px; }
+      .category-board { min-height: 320px; }
+      .selection-grid { grid-template-columns: 1fr; }
+      .lesson-footer button { font-size: 13px; padding: 8px 12px; }
+    }
+    @media (prefers-reduced-motion:reduce) { * { scroll-behavior: auto !important; transition: none !important; animation: none !important; } }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to the workshop</a>
+  <header><div class="wrap header">
+    <div class="brand"><svg width="36" height="36" viewBox="0 0 36 36" fill="none" aria-hidden="true"><path d="M4 3v29h29" stroke="currentColor" stroke-width="1.6"/><path d="m8 26 8-7 7 2 9-13" stroke="currentColor" stroke-width="2"/><circle cx="10" cy="21" r="2" fill="currentColor"/><circle cx="19" cy="15" r="2" fill="currentColor"/><circle cx="29" cy="12" r="2" fill="currentColor"/></svg>Model Workshop</div>
+    <div class="header-actions"><a href="#sources">About &amp; sources</a><button id="theme-toggle" aria-label="Switch color theme">Night view</button></div>
+  </div></header>
+  <div class="wrap">
+    <section class="intro">
+      <div><h1>See how models learn.</h1><p>Move a line. Grow a tree. Fix its errors. See the mechanics before deciding which model fits your problem.</p><div class="progress"><progress id="progress" max="8" value="0" aria-label="Knowledge checks passed"></progress><span id="progress-text">0 of 8 checks passed</span></div></div>
+      <div class="intro-note"><b>A useful model depends on the job.</b><p>A simple baseline can be the right choice. A complex model can still miss the point. Learn the assumptions, then measure what happens on unseen data.</p></div>
+    </section>
+    <nav class="model-nav" id="model-nav" aria-label="Learning path"></nav>
+    <div class="mobile-nav"><label for="lesson-picker">Choose a workshop</label><select id="lesson-picker"></select></div>
+    <main id="main">
+      <noscript><div class="notice">JavaScript is needed for the interactive plots. This guide is self-contained: download it and open it in a browser with JavaScript enabled. No model calls or account are required.</div></noscript>
+    </main>
+  </div>
+  <footer id="sources"><div class="wrap">
+    <h3>Where this guide comes from</h3>
+    <p>Inspired by the topic of <a href="https://www.instagram.com/reels/DecWDZtMVdQ/" target="_blank" rel="noopener noreferrer">baniascodes' reel about machine-learning model rankings</a>. Its publicly readable caption names linear regression, XGBoost, CatBoost, and PCA. The video could not be played during preparation, so this guide does not reconstruct or endorse its exact rankings. Logistic regression, decision trees, random forests, and evaluation are supporting lessons added here.</p>
+    <p>All text, diagrams, datasets, and code in this workshop are original. Datasets are synthetic; displayed metrics are calculated in your browser, not benchmark results. The boosting and categorical-encoding labs are simplified mechanisms, not runs of the XGBoost or CatBoost libraries. Sources were checked on 14 October 2026.</p>
+    <p>The visual direction uses a white instrument-board layout: blue circles for observations, a crimson model line, amber dashed residuals, and outlined validation points. Colors always have shape or text companions. A night view is also available.</p>
+    <a href="https://github.com/rohitjz/machine-learning-model-lab" target="_blank" rel="noopener noreferrer">Source repository</a>
+  </div></footer>
+  <script>
+    "use strict";
+    const LESSONS = [
+      {
+        id:"linear", name:"Linear regression", verb:"Fit a line", title:"How much does one feature change the answer?",
+        intro:"Predict a number with a straight-line rule. Adjust slope and intercept; the dashed gaps are the mistakes your model must reduce.",
+        prompt:"Try to shrink the vertical errors. Then let least squares find the best line.",
+        derive:"Start with a measurable input and a numeric target. A linear rule assumes that one extra unit of input changes the prediction by the same amount, holding other features fixed.",
+        steps:[["Write a rule","Prediction = slope x input + intercept. The parameters control the tilt and starting level."],["Measure each miss","A residual is observed value minus prediction. Square the residuals so positive and negative misses cannot cancel."],["Fit the parameters","Ordinary least squares minimizes their sum. This page computes the one-feature solution directly."]],
+        use:"An interpretable baseline for numeric targets with roughly additive relationships. Feature engineering can extend the representation, but does not remove the need to validate it.",
+        caveat:"A fitted relationship does not establish causation. Outliers can pull the line; straight-line extrapolation can be wrong. Training fit alone does not establish generalization.",
+        quiz:["If you add one to every prediction by raising the intercept, what changes?",["The slope gets steeper.","Every prediction moves up by the same amount.","The model gains another feature."],1,"The intercept translates the line vertically. The effect per unit of input, the slope, stays the same."],
+        recall:"Why square the residuals, and what assumption does the straight line make?",
+        recallAnswer:"Squaring prevents signed errors from canceling and penalizes larger misses more. A linear rule assumes a constant effect per unit input in the chosen representation.",
+        sources:[["scikit-learn: ordinary least squares","https://scikit-learn.org/stable/modules/linear_model.html#ordinary-least-squares"]]
+      },
+      {
+        id:"logistic",name:"Logistic regression",verb:"Decide a category",title:"A probability comes before the yes or no.",
+        intro:"A linear score can be any number. The sigmoid maps it into a probability; a separate threshold decides whether to predict the positive class.",
+        prompt:"Change the threshold. Watch missed positives and false alarms trade places.",
+        derive:"A binary target means one of two categories, such as positive or negative. We need a score that can express uncertainty, then a decision rule that fits the costs of errors.",
+        steps:[["Build a linear score","Here the score is slope x (input - midpoint). A real model can use many features."],["Map it into a probability","The sigmoid, 1 / (1 + exp(-score)), stays between zero and one."],["Choose a decision threshold","Changing the threshold changes decisions, not the fitted probabilities. Training typically minimizes log loss with regularization."]],
+        use:"An interpretable baseline for binary classification. With appropriate extensions it supports multiclass problems too. Check calibration if you will use the outputs as probabilities.",
+        caveat:"A straight decision boundary in feature space can miss nonlinear relationships. A default threshold is not automatically appropriate, and accurate class labels do not prove calibrated probabilities.",
+        quiz:["Raise the threshold from 0.5 to 0.8 without refitting. What changes?",["The predicted positive set shrinks or stays the same.","Every estimated probability increases.","The model is retrained."],0,"The same probabilities face a stricter cutoff. Fewer cases can be labeled positive, while the probability curve stays fixed."],
+        recall:"How is a probability different from a predicted class?",
+        recallAnswer:"The probability is the model's numeric estimate. The class is a decision made by comparing that estimate with a threshold, which should reflect error costs.",
+        sources:[["scikit-learn: logistic regression","https://scikit-learn.org/stable/modules/linear_model.html#logistic-regression"]]
+      },
+      {
+        id:"tree",name:"Decision tree",verb:"Split the data",title:"Replace one global rule with local questions.",
+        intro:"A tree asks a sequence of questions. Each leaf predicts the average target for its training rows, creating a staircase rather than a straight line.",
+        prompt:"Grow the tree. Compare the fit on training points and held-out validation points.",
+        derive:"A global line struggles when different regions follow different rules. A tree partitions the input space and assigns a simple prediction to each region.",
+        steps:[["Try candidate questions","For one numeric feature, ask whether x is below a threshold. Each candidate divides the rows into two groups."],["Choose a locally useful split","This lab picks the split that reduces squared error most. Greedy choices do not guarantee a globally optimal tree."],["Repeat until a limit","A depth limit restricts complexity. Leaves predict their training-group mean."]],
+        use:"A readable baseline when piecewise rules or interactions matter. Trees support regression and classification. Classification leaves summarize class membership rather than a numeric-target mean.",
+        caveat:"A deep tree can memorize noisy training labels and generalize poorly. Trees can be unstable when data changes and are usually poor at extrapolation.",
+        quiz:["A deep tree has almost zero training error. What can you conclude?",["It must be the best model.","It learned the training rows well; unseen performance still needs checking.","Its predictions are causal."],1,"Low training error says how closely the model fits observed training labels. It does not prove that its rules work on new data."],
+        recall:"Why is a tree prediction a staircase in this one-feature lab?",
+        recallAnswer:"Each threshold creates a region. Within a leaf, every input gets the same mean target. Predictions change only when an input crosses a boundary.",
+        sources:[["scikit-learn: decision trees","https://scikit-learn.org/stable/modules/tree.html"]]
+      },
+      {
+        id:"forest",name:"Random forest",verb:"Average trees",title:"Let different trees disagree, then average.",
+        intro:"Train trees on different resampled rows. Their individual predictions wobble; their average combines those views without a sequential correction loop.",
+        prompt:"Add trees and inspect their predictions at the same input. Improvement is not guaranteed at every step.",
+        derive:"A single tree can change substantially with small changes to the dataset. An ensemble combines several estimators so errors do not depend on one set of splits.",
+        steps:[["Resample the training rows","Bootstrap sampling draws rows with replacement. Different trees see different mixtures."],["Fit trees independently","This one-feature lab isolates bootstrapping. Real random forests can also sample features at each split."],["Average their outputs","For this regression task, average numeric predictions. The benefit depends on error diversity; duplicated trees add little."]],
+        use:"A candidate for nonlinear tabular tasks. Averaging can reduce variance compared with a single unstable tree, but it still needs validation and sensible complexity limits.",
+        caveat:"Averaging correlated errors cannot erase shared bias. More trees use more computation and do not guarantee better scores at every addition. One-feature bootstrapping is a simplified bagging demonstration.",
+        quiz:["How do the trees in a random forest differ from boosting rounds?",["Each tree corrects the prior forest's residuals.","They are fitted independently on resampled data and combined.","All trees must have identical training rows."],1,"Bagging trains independent estimators and averages them. Boosting builds an additive model sequentially using loss-related corrections."],
+        recall:"Why does averaging identical trees give no new information?",
+        recallAnswer:"If every tree makes exactly the same prediction, their average is that same prediction. Reducing variance needs some diversity between estimators.",
+        sources:[["scikit-learn: RandomForestRegressor","https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestRegressor.html"]]
+      },
+      {
+        id:"boost",name:"XGBoost",verb:"Correct errors",title:"The next tree works on what the current model misses.",
+        intro:"Start with the average target. Fit a small tree to the residuals, add a scaled correction, then repeat. This squared-error lab computes every step.",
+        prompt:"Add a round and watch training loss change. A lower training loss is not enough to choose the number of rounds.",
+        derive:"One imperfect rule can be improved by another rule that focuses on its remaining errors. Add these corrections to build a function more expressive than one small tree.",
+        steps:[["Start with a base prediction","For squared error, the training-target mean is the best constant starting point."],["Fit the remaining errors","Residual = target - current prediction. For squared error it is proportional to the negative gradient."],["Add only a fraction of the correction","New prediction = old prediction + learning rate x new tree. Repeat within a budget; choose settings on validation data."]],
+        use:"XGBoost is an implementation of gradient-boosted trees, useful to evaluate for structured data with nonlinear relationships. It supports several objectives, not only this demo's squared error.",
+        caveat:"This demo is generic residual boosting with shallow trees, not the XGBoost library. XGBoost also uses gradient/Hessian information and regularization in its objective and tree construction. Tuning, leakage, and overfitting still matter.",
+        quiz:["What target does the next small tree fit in this squared-error lab?",["The same original targets, without considering earlier predictions.","The remaining residuals of the current model.","The validation labels."],1,"It fits target minus current prediction. Then its output is scaled and added. Validation rows remain outside fitting."],
+        recall:"Why does residual fitting describe squared-error boosting but not every loss identically?",
+        recallAnswer:"For squared error, the negative gradient is proportional to the residual. Other loss functions have different gradients, so their corrections are derived differently.",
+        sources:[["XGBoost: introduction to boosted trees","https://xgboost.readthedocs.io/en/stable/tutorials/model.html"]]
+      },
+      {
+        id:"cat",name:"CatBoost",verb:"Encode carefully",title:"A category can carry signal, and leak its own answer.",
+        intro:"Turning categories into label-based statistics can help trees. Including a row's own label in its feature creates a shortcut. Compare a naive encoding with a prefix-only one.",
+        prompt:"Inspect a row. Flip only its target. Its ordered encoding must stay unchanged.",
+        derive:"A city or device name is not a measured number. A target statistic can summarize how a category relates to the outcome, but the statistic must not use the row's own answer.",
+        steps:[["Shuffle a training order","This lab uses one fixed synthetic permutation. Earlier same-category rows form the available prefix."],["Encode from earlier labels only","Encoding = (sum of earlier same-category labels + prior) / (earlier count + 1). The prior here is a fixed 0.5, independent of the selected label."],["Use the encodings within boosting","CatBoost has specialized categorical handling and ordered boosting. Production handling is more extensive than this single-statistic illustration."]],
+        use:"Consider CatBoost when structured data includes categorical features. It is a gradient-boosted-tree system with multiple categorical-feature mechanisms; not every category is processed with this exact statistic.",
+        caveat:"Ordered statistics reduce one source of leakage; they do not excuse using future data, leaking validation targets, or ignoring deployment constraints. The lab shows an encoding mechanism, not a trained CatBoost predictor.",
+        quiz:["Flip the selected row's label while keeping its earlier prefix fixed. What should happen?",["Its prefix-only encoding changes to match the new label.","Its prefix-only encoding stays fixed; later rows may change.","All encodings stay fixed forever."],1,"The selected row excludes its own target, so its feature does not change. Later same-category rows can use this label once it is in their prefix."],
+        recall:"Why is a category with only one example a particularly obvious leakage case?",
+        recallAnswer:"An unsmoothed mean using that row's own target equals the answer. The model can appear to predict it while actually being handed it as a feature.",
+        sources:[["CatBoost: categorical transformations","https://catboost.ai/docs/en/concepts/algorithm-main-stages_cat-to-numberic"],["CatBoost: training stages","https://catboost.ai/docs/en/concepts/algorithm-main-stages"]]
+      },
+      {
+        id:"pca",name:"PCA",verb:"Compress a view",title:"Keep the direction where the data varies most.",
+        intro:"Rotate the axis and project the points onto it. The first principal component keeps the largest possible variance in a one-dimensional linear view.",
+        prompt:"Find the best axis. Then rescale one feature and see why preprocessing changes the answer.",
+        derive:"Two measured features can carry overlapping information. A lower-dimensional representation can summarize their variation, provided you accept that some information is lost.",
+        steps:[["Center the data","Subtract each feature's mean. PCA measures variation around that center; it does not automatically standardize feature scales."],["Find a high-variance direction","For this two-feature lab, a covariance matrix gives the principal axis. Its eigenvector corresponds to the largest eigenvalue."],["Project and measure what remains","Each point becomes a coordinate along the axis. Explained variance is retained variation, not classification accuracy."]],
+        use:"An unsupervised transformation for compression, visualization, or downstream preprocessing. PCA is fitted from features rather than target labels. Evaluate whether the retained representation helps your task.",
+        caveat:"A high-variance direction need not be predictive. Low-variance directions can contain label signal. Scaling choices alter the covariance, so match preprocessing to the features and fit it on training data only.",
+        quiz:["The projection retains most feature variance. Does this prove it keeps the information needed to predict a label?",["Yes, variance and predictive usefulness are identical.","No, PCA does not use the labels to choose its directions.","Yes, because PCA is a classifier."],1,"PCA preserves feature variation, not a target-specific objective. Useful label information may lie in a lower-variance direction."],
+        recall:"What is PCA optimizing, and what is it not optimizing?",
+        recallAnswer:"For a fixed component count it preserves variance in a linear projection, equivalently minimizing squared reconstruction error. It does not directly minimize a classification or regression loss.",
+        sources:[["scikit-learn: PCA","https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html"]]
+      },
+      {
+        id:"choose",name:"Choose a model",verb:"Test the fit",title:"Pick a candidate. Let a fair evaluation decide.",
+        intro:"Match the target, representation, and constraints first. Compare candidates on held-out validation data; reserve a separate test set for the final evaluation.",
+        prompt:"Change the task and constraints. Recommendations are starting hypotheses, not a universal ranking.",
+        derive:"A model is a rule fitted from data. Its value depends on a particular task, useful features, representative examples, acceptable error costs, and operating constraints.",
+        steps:[["Define the outcome","A number suggests regression; a category suggests classification; compression without labels suggests a transformation such as PCA."],["Establish a baseline","Compare a simple rule with plausible nonlinear candidates. Use task-appropriate metrics and splits; time and grouped data need special care."],["Separate selection from final testing","Fit on training data, select settings with validation or cross-validation, then evaluate once on a reserved test set. Fit preprocessing within the training folds."]],
+        use:"Choose the smallest system that meets the task's measured needs. Interpretability, calibration, latency, and maintenance can matter alongside predictive performance.",
+        caveat:"Repeatedly choosing settings from test results turns the test into a validation set. Leakage or an unrealistic split can make any model look better than it is. No model family is universally best.",
+        quiz:["You compare many settings using the test labels, then report the best test score. What went wrong?",["The test set became part of model selection.","You needed a more powerful model.","Nothing, as long as training error was low."],0,"Selection learned from the test results. Use validation or cross-validation for choices and keep a separate untouched test set for final evaluation."],
+        recall:"Explain training, validation, and testing as three different questions.",
+        recallAnswer:"Training: what parameters fit these examples? Validation: which settings or model should we choose? Testing: how does the chosen procedure perform on an untouched, representative holdout?",
+        sources:[["scikit-learn: cross-validation and leakage","https://scikit-learn.org/stable/modules/cross_validation.html"]]
+      }
+    ];
+    const DEFAULTS = {slope:0.35,intercept:0.25,outlier:false,residuals:true,logSlope:8,midpoint:.5,threshold:.5,depth:1,forestCount:3,forestDepth:3,probe:.65,rounds:0,rate:.3,catRow:0,ordered:true,catFlip:false,angle:0,scale:1,task:"number",structure:"numeric",constraint:"explain"};
+    const state = {...DEFAULTS,lesson:"linear",passed:new Set(),answers:{}};
+    const main = document.getElementById("main");
+    const mean = array => array.reduce((sum,x)=>sum+x,0)/array.length;
+    const clamp = (x,min,max)=>Math.max(min,Math.min(max,x));
+    const fixed = (value,digits=3)=>Number(value).toFixed(digits);
+    const escapeHTML = text=>String(text).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+    function rng(seed) { let value=seed>>>0; return ()=>{value=(1664525*value+1013904223)>>>0;return value/4294967296;}; }
+    const cleanTarget=x=>.52+.29*Math.sin(6.1*x)+.1*x;
+    const dataRandom=rng(702);
+    const TRAIN=Array.from({length:18},(_,i)=>{const x=(i+.5)/18;return{x,y:cleanTarget(x)+(dataRandom()-.5)*.34};});
+    const VALID=Array.from({length:40},(_,i)=>{const x=(i+.3)/40;return{x,y:cleanTarget(x)};});
+    const CLASS=Array.from({length:16},(_,i)=>({x:(i+.5)/16,y:[0,0,0,1,0,0,1,0,1,1,0,1,1,1,1,1][i]}));
+    const CAT=[{category:"Cedar",y:1},{category:"Birch",y:0},{category:"Cedar",y:1},{category:"Maple",y:0},{category:"Birch",y:1},{category:"Cedar",y:0},{category:"Maple",y:1},{category:"Birch",y:0}];
+    const PCA_BASE=Array.from({length:22},(_,i)=>{const t=(i-10.5)/6;return{x:t,y:.75*t+Math.sin(i*2.7)*.22};});
+    function linearData() {
+      return Array.from({length:12},(_,i)=>({x:(i+1)/13,y:.12+.68*(i+1)/13+Math.sin(i*2.4)*.065+(state.outlier && i===10?.62:0)}));
+    }
+    function linearFit(rows) {
+      const mx=mean(rows.map(r=>r.x)),my=mean(rows.map(r=>r.y));
+      const denominator=rows.reduce((s,r)=>s+(r.x-mx)**2,0);
+      if(denominator===0) throw new Error("Cannot fit a slope with constant inputs.");
+      const slope=rows.reduce((s,r)=>s+(r.x-mx)*(r.y-my),0)/denominator;
+      return{slope,intercept:my-slope*mx};
+    }
+    function mse(rows,predict) { return mean(rows.map(r=>(r.y-predict(r.x))**2)); }
+    const variance=rows=>rows.reduce((s,r)=>s+(r.y-mean(rows.map(p=>p.y)))**2,0);
+    function fitTree(rows,depth) {
+      const value=mean(rows.map(r=>r.y));
+      if(depth<=0 || rows.length<2) return{value,size:rows.length};
+      const sorted=[...rows].sort((a,b)=>a.x-b.x);
+      let best=null,bestLoss=variance(rows);
+      for(let i=1;i<sorted.length;i++) {
+        if(sorted[i-1].x===sorted[i].x) continue;
+        const left=sorted.slice(0,i),right=sorted.slice(i),loss=variance(left)+variance(right);
+        if(loss<bestLoss-1e-12) {bestLoss=loss;best={cut:(sorted[i-1].x+sorted[i].x)/2,left,right};}
+      }
+      if(!best) return{value,size:rows.length};
+      return{value,size:rows.length,cut:best.cut,left:fitTree(best.left,depth-1),right:fitTree(best.right,depth-1)};
+    }
+    function predictTree(tree,x) {return tree.cut===undefined?tree.value:predictTree(x<=tree.cut?tree.left:tree.right,x);}
+    function leafCount(tree) {return tree.cut===undefined?1:leafCount(tree.left)+leafCount(tree.right);}
+    function forest(count,depth) {
+      return Array.from({length:count},(_,index)=>{const random=rng(199+index*977);const sample=Array.from({length:TRAIN.length},()=>TRAIN[Math.floor(random()*TRAIN.length)]);return fitTree(sample,depth);});
+    }
+    function boosted(rounds,rate) {
+      const base=mean(TRAIN.map(r=>r.y)),trees=[],history=[mse(TRAIN,()=>base)];
+      const predict=x=>base+rate*trees.reduce((sum,t)=>sum+predictTree(t,x),0);
+      for(let i=0;i<rounds;i++) {
+        const residual=TRAIN.map(row=>({x:row.x,y:row.y-predict(row.x)}));
+        trees.push(fitTree(residual,1));
+        history.push(mse(TRAIN,predict));
+      }
+      return{base,trees,predict,history};
+    }
+    function categoryRows() {return CAT.map((r,index)=>({...r,y:index===state.catRow && state.catFlip?1-r.y:r.y}));}
+    function encodeCategories(rows,ordered) {
+      return rows.map((row,index)=>{
+        const available=ordered?rows.slice(0,index):rows;
+        const matching=available.filter(r=>r.category===row.category);
+        return ordered?(matching.reduce((s,r)=>s+r.y,0)+.5)/(matching.length+1):mean(matching.map(r=>r.y));
+      });
+    }
+    function pcaData(scale) {
+      const data=PCA_BASE.map(r=>({x:r.x,y:r.y*scale}));
+      const mx=mean(data.map(r=>r.x)),my=mean(data.map(r=>r.y));
+      return data.map(r=>({x:r.x-mx,y:r.y-my}));
+    }
+    function pcaInfo(data,angle) {
+      const a=mean(data.map(p=>p.x*p.x)),b=mean(data.map(p=>p.x*p.y)),c=mean(data.map(p=>p.y*p.y));
+      const bestAngle=.5*Math.atan2(2*b,a-c)*180/Math.PI;
+      const radians=angle*Math.PI/180,u={x:Math.cos(radians),y:Math.sin(radians)};
+      const total=a+c,retained=a*u.x*u.x+2*b*u.x*u.y+c*u.y*u.y;
+      const eigenMax=(total+Math.sqrt((a-c)**2+4*b*b))/2;
+      return{bestAngle,u,total,retained,ratio:retained/total,bestRatio:eigenMax/total,reconstruction:total-retained};
+    }
+    function range(key,label,min,max,step,help="") {
+      const display=key==="catRow"?state[key]+1:step>=1?Math.round(state[key]):fixed(state[key],2);
+      return `<label class="control" for="${key}"><span class="label">${label}<output id="${key}-output">${display}</output></span><input id="${key}" data-param="${key}" type="range" min="${min}" max="${max}" step="${step}" value="${state[key]}">${help?`<small>${help}</small>`:""}</label>`;
+    }
+    function select(key,label,options) {
+      return `<label class="control" for="${key}"><span class="label">${label}</span><select id="${key}" data-param="${key}">${options.map(([value,name])=>`<option value="${value}" ${state[key]===value?"selected":""}>${name}</option>`).join("")}</select></label>`;
+    }
+    function check(key,label) {return `<label class="checkbox" for="${key}"><input type="checkbox" id="${key}" data-param="${key}" ${state[key]?"checked":""}>${label}</label>`;}
+    function metric(value,label,unit="") {return `<div class="metric"><strong>${value}${unit?` <em>${unit}</em>`:""}</strong><span>${label}</span></div>`;}
+    function metrics(...items) {return `<div class="metric-strip">${items.join("")}</div>`;}
+    function legend({validation=false,errors=false,classes=false}={}) {
+      return `<div class="legend"><span><svg aria-hidden="true"><circle cx="10" cy="8" r="4" class="observed"/></svg>${classes?"Observed label":"Training data"}</span><span><svg aria-hidden="true"><path d="M0 8h20" class="predicted"/></svg>${classes?"Probability":"Model prediction"}</span>${validation?'<span><svg aria-hidden="true"><path d="m10 3 5 5-5 5-5-5Z" class="validation"/></svg>Validation data</span>':""}${errors?'<span><svg aria-hidden="true"><path d="M0 8h20" class="error-line"/></svg>Residual</span>':""}</div>`;
+    }
+    function createPlot({xmin=0,xmax=1,ymin=0,ymax=1,title="Synthetic data and predictions",xlabel="Input feature",ylabel="Target value",square=false}={}) {
+      const width=640,height=square?614:390,left=84,right=20,top=24,bottom=54;
+      const x=v=>left+(v-xmin)/(xmax-xmin)*(width-left-right),y=v=>height-bottom-(v-ymin)/(ymax-ymin)*(height-top-bottom);
+      const content=[];
+      for(let i=0;i<=4;i++) {
+        const vx=xmin+(xmax-xmin)*i/4,vy=ymin+(ymax-ymin)*i/4;
+        content.push(`<path d="M${x(vx)} ${top}V${height-bottom}" class="grid-line"/><path d="M${left} ${y(vy)}H${width-right}" class="grid-line"/><text x="${x(vx)}" y="${height-bottom+24}" text-anchor="middle" class="axis-text">${Number(vx.toFixed(2))}</text><text x="${left-12}" y="${y(vy)+4}" text-anchor="end" class="axis-text">${Number(vy.toFixed(2))}</text>`);
+      }
+      content.push(`<path d="M${left} ${top}V${height-bottom}H${width-right}" class="axis"/><text x="${(left+width-right)/2}" y="${height-7}" text-anchor="middle" class="axis-text">${xlabel}</text><text transform="translate(15 ${(top+height-bottom)/2}) rotate(-90)" text-anchor="middle" class="axis-text">${ylabel}</text>`);
+      function line(predict,{className="predicted",opacity=1,dash="",strokeWidth=null}={}) {
+        const points=Array.from({length:301},(_,i)=>{const vx=xmin+(xmax-xmin)*i/300;return`${x(vx).toFixed(2)},${y(predict(vx)).toFixed(2)}`;}).join(" ");
+        content.push(`<polyline points="${points}" class="${className}" opacity="${opacity}" ${dash?`stroke-dasharray="${dash}"`:""} ${strokeWidth?`style="stroke-width:${strokeWidth}"`:""} clip-path="url(#plot-clip)"/>`);
+      }
+      function points(rows,validation=false) {
+        rows.forEach(r=>content.push(validation?`<path d="m${x(r.x)} ${y(r.y)-4} 4 4-4 4-4-4Z" class="validation" clip-path="url(#plot-clip)"/>`:`<circle cx="${x(r.x)}" cy="${y(r.y)}" r="4.5" class="observed" clip-path="url(#plot-clip)"/>`));
+      }
+      function residuals(rows,predict) {rows.forEach(r=>content.push(`<path d="M${x(r.x)} ${y(r.y)}V${y(predict(r.x))}" class="error-line" clip-path="url(#plot-clip)"/>`));}
+      function raw(markup) {content.push(markup);}
+      function svg() {return `<svg class="chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHTML(title)}"><title>${escapeHTML(title)}</title><defs><clipPath id="plot-clip"><rect x="${left}" y="${top}" width="${width-left-right}" height="${height-top-bottom}"/></clipPath></defs>${content.join("")}</svg>`;}
+      return{x,y,line,points,residuals,raw,svg,width,height,left,right,top,bottom};
+    }
+    function modelAdvice() {
+      if(state.task==="compress") return[
+        ["PCA","Find a compact linear representation. Center the training features and decide whether their scales should be standardized.","pca"],
+        ["Keep the original features as a baseline","Compare downstream performance with and without compression. Retaining variance does not establish label usefulness.","choose"]
+      ];
+      const baseline=state.task==="number"?["Linear regression","Start with a simple numeric prediction. Inspect additive assumptions, residuals, outliers, and interpretability. Encode categories using training data only.","linear"]:["Logistic regression","Start with a class-probability baseline. Inspect threshold costs, imbalance, and calibration. Encode categories using training data only.","logistic"];
+      if(state.structure==="categories") return[baseline,["CatBoost candidate","Evaluate specialized categorical handling. Keep target statistics and preprocessing inside the training split.","cat"]];
+      if(state.constraint==="explain") return[baseline,["Shallow decision tree","Inspect readable local rules. Test their stability and validate depth; a large tree may lose that readability.","tree"]];
+      return[baseline,["XGBoost and random-forest candidates","Compare sequential corrections with independently averaged trees. Choose with fair validation and latency measurements.","boost"]];
+    }
+    function demo(id) {
+      if(id==="linear") {
+        const rows=linearData(),predict=x=>state.slope*x+state.intercept,best=linearFit(rows);
+        const plot=createPlot({ymax:state.outlier?1.6:1.2,title:"Linear regression: blue observed values, crimson prediction, dashed residuals",xlabel:"Measured input (synthetic)"});
+        if(state.residuals) plot.residuals(rows,predict);
+        plot.line(predict);plot.points(rows);
+        return{
+          plot:legend({errors:state.residuals})+plot.svg()+metrics(metric(fixed(mse(rows,predict)),"Current training MSE"),metric(fixed(mse(rows,x=>best.slope*x+best.intercept)),"Best possible line MSE"),metric(fixed(state.slope,2),"Slope")),
+          controls:`<h3>Make a prediction rule</h3><p>${LESSONS[0].prompt}</p><div class="controls-grid">${range("slope","Slope",-1,2,.01,"Effect of one extra input unit.")}${range("intercept","Intercept",-.5,1,.01,"Prediction when input is zero.")}</div>${check("outlier","Add one unusually high target")}${check("residuals","Show residuals")}<button class="primary" data-action="fit-line">Fit least squares</button><button data-action="reset">Reset this workshop</button><div class="formula"><code>prediction = ${fixed(state.slope,2)} x input + ${fixed(state.intercept,2)}</code></div>`,
+          caption:"Dots and all losses are computed from a synthetic dataset. MSE is mean squared error; smaller is better on the rows being measured.",
+          insight:state.outlier?"The outlier changes the best-fit line because squared error gives large misses more weight. Fit again, then remove the outlier and compare.":"A line can move or rotate, but it cannot represent every shape. Least squares chooses the best line for these training rows, not the best model for every task."
+        };
+      }
+      if(id==="logistic") {
+        const probability=x=>1/(1+Math.exp(-state.logSlope*(x-state.midpoint)));
+        let tp=0,fp=0,fn=0,tn=0;
+        CLASS.forEach(r=>{const positive=probability(r.x)>=state.threshold;if(positive&&r.y)tp++;else if(positive)fp++;else if(r.y)fn++;else tn++;});
+        const loss=mean(CLASS.map(r=>{const p=clamp(probability(r.x),1e-12,1-1e-12);return-(r.y*Math.log(p)+(1-r.y)*Math.log(1-p));}));
+        const plot=createPlot({ymin:-.1,ymax:1.1,ylabel:"Probability / observed label",title:"Sigmoid probability curve with binary labels and a separate decision threshold"});
+        plot.line(probability);plot.points(CLASS);
+        plot.raw(`<path d="M${plot.x(0)} ${plot.y(state.threshold)}H${plot.x(1)}" class="error-line"/><text x="${plot.x(.02)}" y="${plot.y(state.threshold)-10}" class="chart-label">Threshold ${fixed(state.threshold,2)}</text>`);
+        return{
+          plot:legend({classes:true})+plot.svg()+metrics(metric(`${tp} / ${tp+fn}`,"True positives / all positives"),metric(fp,"False alarms"),metric(fixed(loss),"Log loss")),
+          controls:`<h3>Probability, then a decision</h3><p>${LESSONS[1].prompt}</p><div class="controls-grid">${range("midpoint","Score midpoint",.1,.9,.01)}${range("logSlope","Score slope",1,16,.5)}${range("threshold","Decision threshold",.1,.9,.05)}</div><button data-action="reset">Reset this workshop</button><div class="formula"><code>p = 1 / (1 + exp(-score))<br>positive if p &gt;= threshold</code></div><p>Coefficients here are manual controls. This lab does not fit a classifier.</p>`,
+          caption:`Binary labels are synthetic. At this setting: TP ${tp}, FP ${fp}, FN ${fn}, TN ${tn}. The dashed horizontal line is the decision threshold, not another fitted parameter.`,
+          insight:"Changing only the threshold leaves the probability curve and log loss unchanged. It changes which cases trigger a positive decision."
+        };
+      }
+      if(id==="tree") {
+        const tree=fitTree(TRAIN,state.depth),predict=x=>predictTree(tree,x);
+        const plot=createPlot({ymin:0,ymax:1.15,title:"A fitted regression tree with training circles and held-out validation diamonds"});
+        plot.line(predict);plot.points(VALID,true);plot.points(TRAIN);
+        return{
+          plot:legend({validation:true})+plot.svg()+`<div class="branch-diagram"><div><b>${tree.cut===undefined?"No split":`x &lt;= ${fixed(tree.cut,2)}`}</b>${tree.cut===undefined?"One group":`Left branch: ${tree.left.size} training rows`}</div><div><b>${tree.cut===undefined?"Predict the mean":"Otherwise, go right"}</b>${tree.cut===undefined?fixed(tree.value):`Right branch: ${tree.right.size} training rows`}</div></div>`+metrics(metric(fixed(mse(TRAIN,predict)),"Training MSE"),metric(fixed(mse(VALID,predict)),"Validation MSE"),metric(leafCount(tree),"Leaves")),
+          controls:`<h3>Control the complexity</h3><p>${LESSONS[2].prompt}</p>${range("depth","Maximum depth",0,7,1,"Zero gives one constant prediction.")}<button class="primary" data-action="grow-tree">Add one depth level</button><button data-action="reset">Reset this workshop</button><div class="formula"><code>leaf prediction = mean(targets in that leaf)</code></div><p>The tree learns from training circles only. Validation diamonds never choose its splits.</p>`,
+          caption:"Validation targets follow the synthetic underlying curve; training targets include seeded noise. This makes overfitting visible without claiming a real-world benchmark.",
+          insight:"More splits can lower training error by fitting noise. Watch validation error separately. These displayed holdout results are for learning; repeated use for tuning makes this a validation set, not a final test."
+        };
+      }
+      if(id==="forest") {
+        const trees=forest(state.forestCount,state.forestDepth),predict=x=>mean(trees.map(t=>predictTree(t,x)));
+        const predictions=trees.map(t=>predictTree(t,state.probe)),average=mean(predictions),spread=Math.sqrt(mean(predictions.map(y=>(y-average)**2)));
+        const plot=createPlot({ymax:1.15,title:"Independent bootstrap trees as thin paths, with a thick ensemble average"});
+        trees.forEach(t=>plot.line(x=>predictTree(t,x),{opacity:.2,strokeWidth:1}));
+        plot.line(predict);plot.points(VALID,true);plot.points(TRAIN);
+        plot.raw(`<path d="M${plot.x(state.probe)} ${plot.top}V${plot.height-plot.bottom}" class="error-line"/><text x="${plot.x(state.probe)+8}" y="${plot.top+20}" class="chart-label">Inspect x = ${fixed(state.probe,2)}</text>`);
+        return{
+          plot:legend({validation:true})+plot.svg()+metrics(metric(fixed(average),"Ensemble prediction here"),metric(fixed(spread),"Spread across trees here"),metric(fixed(mse(VALID,predict)),"Validation MSE")),
+          controls:`<h3>Independent views</h3><p>${LESSONS[3].prompt}</p><div class="controls-grid">${range("forestCount","Trees",1,12,1)}${range("forestDepth","Tree depth",1,5,1)}${range("probe","Inspect input",.05,.95,.05)}</div><button data-action="reset">Reset this workshop</button>${predictions.slice(0,5).map((value,i)=>`<div class="forest-chip"><span>Tree ${i+1}</span><b>${fixed(value)}</b></div>`).join("")}<div class="formula"><code>ensemble = average(tree predictions)</code></div>`,
+          caption:"Thin paths are independently fitted bootstrap trees; the thick path is their mean. With one feature, this lab illustrates bagging and cannot demonstrate feature subsampling.",
+          insight:"Tree disagreement is not a calibrated confidence interval. Averaging can reduce variance, but shared bias and correlated mistakes can remain."
+        };
+      }
+      if(id==="boost") {
+        const model=boosted(state.rounds,state.rate),plot=createPlot({ymax:1.15,title:"Additive predictions from sequential residual-fitting tree stumps"});
+        plot.line(()=>model.base,{opacity:.4,dash:"5 4",strokeWidth:1.5});
+        plot.residuals(TRAIN,model.predict);plot.line(model.predict);plot.points(VALID,true);plot.points(TRAIN);
+        const maxLoss=Math.max(...model.history);
+        const bars=model.history.map((loss,i)=>`<div style="height:${Math.max(2,loss/maxLoss*80)}px" title="Round ${i}: training MSE ${fixed(loss,6)}"></div>`).join("");
+        return{
+          plot:legend({validation:true,errors:true})+plot.svg()+metrics(metric(state.rounds,"Correction trees"),metric(fixed(model.history.at(-1)),"Training MSE"),metric(fixed(mse(VALID,model.predict)),"Validation MSE"))+`<div class="loss-bars" role="img" aria-label="Training loss after each round: ${model.history.map((x,i)=>`round ${i}: ${fixed(x,4)}`).join(", ")}">${bars}</div><p class="chart-caption">Training loss history. Every bar is computed, not an illustrative score.</p>`,
+          controls:`<h3>Build an additive model</h3><p>${LESSONS[4].prompt}</p><div class="controls-grid">${range("rounds","Boosting rounds",0,20,1)}${range("rate","Learning rate",0,1,.05,"Zero adds no correction.")}</div><button class="primary" data-action="add-round">Add a correction tree</button><button data-action="reset">Reset this workshop</button><div class="formula"><code>residual = y - current prediction<br>new = current + rate x correction</code></div><p>This is squared-error residual boosting, not an XGBoost library execution.</p>`,
+          caption:"Each correction is a one-split regression tree. The dashed constant line is the initial target mean. Only training rows fit the trees.",
+          insight:state.rate===0?"A zero learning rate leaves every prediction at the base mean. Adding rounds cannot change the model when every correction is multiplied by zero.":"The next tree is fitted after reading the current model's residuals. This sequential dependency distinguishes boosting from independently averaged trees."
+        };
+      }
+      if(id==="cat") {
+        const rows=categoryRows(),encoded=encodeCategories(rows,state.ordered),original=encodeCategories(CAT,state.ordered),selected=rows[state.catRow];
+        const prefix=rows.slice(0,state.catRow).filter(r=>r.category===selected.category),sum=prefix.reduce((s,r)=>s+r.y,0);
+        return{
+          plot:`<div class="legend"><span>One fixed training permutation</span><span>Target: synthetic 0 / 1</span></div><div class="category-board"><div class="data-row heading"><span>Row</span><span>Category</span><span>Target</span><span>Encoded feature</span></div>${rows.map((r,i)=>`<div class="data-row ${i===state.catRow?"selected":""}"><span>${i+1}</span><span>${r.category}</span><span>${r.y}</span><div><span class="numeric">${fixed(encoded[i],2)}</span><div class="encoded"><i style="width:${encoded[i]*100}%"></i></div></div></div>`).join("")}</div>`+metrics(metric(fixed(original[state.catRow],2),"Selected encoding before flip"),metric(fixed(encoded[state.catRow],2),"Selected encoding now"),metric(prefix.length,"Earlier matching rows")),
+          controls:`<h3>Trace the available information</h3><p>${LESSONS[5].prompt}</p>${range("catRow","Selected row",0,7,1,"Earlier rows in this order form the prefix.")}${check("ordered","Use earlier same-category rows only")}${check("catFlip","Flip the selected row's target")}<button data-action="reset">Reset this workshop</button><div class="formula"><code>${state.ordered?`(${sum} + 0.5) / (${prefix.length} + 1) = ${fixed(encoded[state.catRow],2)}`:"naive = mean(all labels in the category)"}</code></div><p>No validation targets are used. The fixed prior does not depend on this row's target.</p>`,
+          caption:"The full rows are visible for teaching. Prefix-only computation nevertheless excludes the selected row and all later rows. Naive means include the row itself.",
+          insight:state.ordered?"The selected row's ordered encoding stays unchanged when only its own target flips. Later same-category rows can change because they legitimately see it in their prefix.":"The naive encoding sees all same-category labels, including its own. A target-dependent feature can leak an answer and inflate apparent training performance."
+        };
+      }
+      if(id==="pca") {
+        const data=pcaData(state.scale),info=pcaInfo(data,state.angle),bound=Math.max(2.3,...data.flatMap(p=>[Math.abs(p.x),Math.abs(p.y)]))+.3;
+        const plot=createPlot({xmin:-bound,xmax:bound,ymin:-bound,ymax:bound,square:true,xlabel:"Centered feature A",ylabel:"Centered feature B",title:"Centered data with a rotatable projection axis and dashed reconstruction errors"});
+        const projections=data.map(p=>{const z=p.x*info.u.x+p.y*info.u.y;return{x:z*info.u.x,y:z*info.u.y};});
+        data.forEach((p,i)=>plot.raw(`<path d="M${plot.x(p.x)} ${plot.y(p.y)}L${plot.x(projections[i].x)} ${plot.y(projections[i].y)}" class="error-line"/>`));
+        plot.raw(`<path d="M${plot.x(-bound*info.u.x)} ${plot.y(-bound*info.u.y)}L${plot.x(bound*info.u.x)} ${plot.y(bound*info.u.y)}" class="predicted"/>`);
+        plot.points(data);
+        projections.forEach(p=>plot.raw(`<path d="m${plot.x(p.x)} ${plot.y(p.y)-4} 4 4-4 4-4-4Z" class="validation"/>`));
+        return{
+          plot:`<div class="legend"><span><svg aria-hidden="true"><circle cx="10" cy="8" r="4" class="observed"/></svg>Centered data</span><span><svg aria-hidden="true"><path d="M0 8h20" class="predicted"/></svg>Projection axis</span><span><svg aria-hidden="true"><path d="m10 3 5 5-5 5-5-5Z" class="validation"/></svg>Projected point</span></div>`+plot.svg()+metrics(metric(fixed(info.ratio*100,1),"Variance retained","%"),metric(fixed(info.bestRatio*100,1),"Best one-axis retention","%"),metric(fixed(info.reconstruction),"Mean reconstruction error")),
+          controls:`<h3>Find a useful axis</h3><p>${LESSONS[6].prompt}</p><div class="controls-grid">${range("angle","Projection angle",-90,90,1)}${range("scale","Feature B scale",.25,3,.25,"Scaling one feature changes its variance.")}</div><button class="primary" data-action="fit-pca">Find principal axis</button><button data-action="reset">Reset this workshop</button><div class="formula"><code>coordinate = centered point . unit axis</code></div><p>The covariance calculation is exact for these rows. Values shown use mean squared distances.</p>`,
+          caption:"The plot uses equal axis scales, so the geometry matches the data coordinates. Dashed segments are reconstruction errors. No target labels are used.",
+          insight:"Keeping high variance answers a compression question. It does not prove you retained the feature direction most useful for a classification or regression task."
+        };
+      }
+      if(id==="choose") {
+        const advice=modelAdvice();
+        return{
+          plot:`<div class="fundamentals"><div><b>Features</b><p>Inputs available when making the prediction.</p></div><div><b>Target</b><p>The outcome you want to estimate.</p></div><div><b>Loss</b><p>A rule for measuring how wrong the model is.</p></div><div><b>Unseen data</b><p>Examples outside parameter fitting.</p></div></div><div class="selection-grid">${advice.map(([name,text,id])=>`<article class="candidate"><h3>${name}</h3><p>${text}</p><a href="#lesson=${id}" data-lesson="${id}">Inspect the mechanism</a></article>`).join("")}</div><div class="path-card"><b>A fair sequence:</b> fit on training &rarr; select with validation or cross-validation &rarr; evaluate the chosen procedure on a separate test set.</div>`,
+          controls:`<h3>Describe the job</h3><p>${LESSONS[7].prompt}</p>${select("task","What do you need?",[["number","Predict a number"],["class","Predict a category"],["compress","Compress features"]])}${select("structure","Feature structure",[["numeric","Mostly numeric"],["categories","Many categorical features"]])}${select("constraint","What matters most?",[["explain","Readable explanation"],["accuracy","Predictive performance"]])}<button data-action="reset">Reset this workshop</button><p>These are reasoned candidate choices, not performance claims or automatic model recommendations.</p>`,
+          caption:"Candidate selection depends on the synthetic scenario. This workshop does not train or benchmark the candidates for your real dataset.",
+          insight:"PCA is an unsupervised transformation; it does not belong in a universal predictive-model tier list. Model names cannot replace a task, appropriate metrics, and a leakage-free evaluation."
+        };
+      }
+      throw new Error(`Unknown workshop: ${id}`);
+    }
+    function navigation() {
+      document.getElementById("model-nav").innerHTML=LESSONS.map(l=>`<a href="#lesson=${l.id}&amp;passed=${[...state.passed].join(",")}" data-lesson="${l.id}" ${state.lesson===l.id?'aria-current="page"':""}><b>${l.name}</b>${state.passed.has(l.id)?"Check passed":l.verb}</a>`).join("");
+      document.getElementById("lesson-picker").innerHTML=LESSONS.map((l,i)=>`<option value="${l.id}" ${l.id===state.lesson?"selected":""}>${i+1}. ${l.name}${state.passed.has(l.id)?" (check passed)":""}</option>`).join("");
+      document.getElementById("progress").value=state.passed.size;
+      document.getElementById("progress-text").textContent=`${state.passed.size} of 8 checks passed`;
+    }
+    function quizMarkup(lesson) {
+      const [question,options,correct,explanation]=lesson.quiz,chosen=state.answers[lesson.id];
+      return `<section class="quiz" aria-labelledby="quiz-title"><h2 id="quiz-title">Check your understanding</h2><p>${question}</p><div class="answers">${options.map((answer,i)=>`<button data-answer="${i}" aria-pressed="${chosen===i}"><span>${String.fromCharCode(65+i)}</span>${answer}</button>`).join("")}</div><div class="feedback" id="feedback" role="status">${chosen===undefined?"":`<b>${chosen===correct?"Correct.":"Try again."}</b> ${explanation}`}</div></section>`;
+    }
+    function labMarkup(lesson) {
+      const lab=demo(lesson.id),index=LESSONS.indexOf(lesson)+1;
+      return `<section class="lab"><div class="lab-top"><div><h2 id="lesson-title" tabindex="-1">${lesson.title}</h2><p>${lesson.intro}</p></div><span class="lab-index" aria-label="Lesson ${index} of 8">${index}</span></div><div class="lab-layout"><div class="visual" id="visual">${lab.plot}<p class="chart-caption">${lab.caption}</p></div><section class="control-panel" aria-label="Experiment controls" id="controls">${lab.controls}</section></div><div class="insight"><p>${lab.insight}</p></div></section>`;
+    }
+    function render() {
+      const lesson=LESSONS.find(l=>l.id===state.lesson);
+      if(!lesson)throw new Error("Unknown lesson state.");
+      navigation();
+      const index=LESSONS.indexOf(lesson);
+      main.innerHTML=`<div id="lab-root">${labMarkup(lesson)}</div><div class="lessons-below"><section class="derive"><div><h2>Build the idea from first principles.</h2><p>${lesson.derive}</p><h3>When it earns its place</h3><p>${lesson.use}</p></div><div class="steps">${lesson.steps.map(([title,text],i)=>`<div class="step"><span>${i+1}</span><p><b>${title}</b>${text}</p></div>`).join("")}</div></section>${quizMarkup(lesson)}<details><summary>What this model can still get wrong</summary><p>${lesson.caveat}</p></details><details><summary>Recall aloud: ${lesson.recall}</summary><p>${lesson.recallAnswer}</p></details><div class="sources">Mechanism sources:<br>${lesson.sources.map(([name,url])=>`<a href="${url}" target="_blank" rel="noopener noreferrer">${name}</a>`).join("")}</div><div class="lesson-footer">${index?`<button data-lesson="${LESSONS[index-1].id}">Previous: ${LESSONS[index-1].name}</button>`:"<span></span>"}${index<LESSONS.length-1?`<button class="primary" data-lesson="${LESSONS[index+1].id}">Next: ${LESSONS[index+1].name}</button>`:'<button data-lesson="linear">Return to the first workshop</button>'}</div></div>`;
+    }
+    function renderLab(focusId=null) {
+      const lesson=LESSONS.find(l=>l.id===state.lesson);
+      document.getElementById("lab-root").innerHTML=labMarkup(lesson);
+      if(focusId)document.getElementById(focusId)?.focus({preventScroll:true});
+    }
+    function save(replace=false) {
+      const hash=new URLSearchParams({lesson:state.lesson,passed:[...state.passed].join(",")}).toString();
+      if(replace)history.replaceState(null,"","#"+hash);
+      else history.pushState(null,"","#"+hash);
+    }
+    function go(id,updateHistory=true) {
+      if(!LESSONS.some(l=>l.id===id))throw new Error(`Unknown lesson ${id}`);
+      state.lesson=id;
+      if(updateHistory)save();
+      render();
+      document.getElementById("lesson-title").focus({preventScroll:true});
+      if(innerWidth<761)document.getElementById("main").scrollIntoView({behavior:"instant"});
+    }
+    function route() {
+      if(location.hash==="#main" || location.hash==="#sources")return;
+      const params=new URLSearchParams(location.hash.slice(1)),id=params.get("lesson")||"linear";
+      const valid=LESSONS.some(l=>l.id===id);
+      state.lesson=valid?id:"linear";
+      state.passed=new Set((params.get("passed")||"").split(",").filter(id=>LESSONS.some(l=>l.id===id)));
+      render();
+      if(!valid) {
+        const notice=document.createElement("p");notice.className="notice";notice.textContent="That workshop link is not recognized. Linear regression is shown instead.";main.prepend(notice);
+      }
+    }
+    document.addEventListener("click",event=>{
+      const target=event.target.closest("button,a[data-lesson]");
+      if(!target)return;
+      if(target.dataset.lesson) {event.preventDefault();go(target.dataset.lesson);}
+      else if(target.dataset.action) {
+        const action=target.dataset.action;
+        if(action==="fit-line") {const fit=linearFit(linearData());state.slope=fit.slope;state.intercept=fit.intercept;}
+        else if(action==="grow-tree")state.depth=Math.min(7,state.depth+1);
+        else if(action==="add-round")state.rounds=Math.min(20,state.rounds+1);
+        else if(action==="fit-pca")state.angle=pcaInfo(pcaData(state.scale),0).bestAngle;
+        else if(action==="reset")document.querySelectorAll("[data-param]").forEach(control=>{const key=control.dataset.param;state[key]=DEFAULTS[key];});
+        else throw new Error(`Unknown action ${action}`);
+        renderLab();
+        document.querySelector(`[data-action="${action}"]`)?.focus({preventScroll:true});
+      } else if(target.dataset.answer!==undefined) {
+        const answer=Number(target.dataset.answer),lesson=LESSONS.find(l=>l.id===state.lesson);
+        state.answers[lesson.id]=answer;
+        if(answer===lesson.quiz[2]) {state.passed.add(lesson.id);save(true);navigation();}
+        document.querySelectorAll("[data-answer]").forEach(button=>button.setAttribute("aria-pressed",String(Number(button.dataset.answer)===answer)));
+        document.getElementById("feedback").innerHTML=`<b>${answer===lesson.quiz[2]?"Correct.":"Try again."}</b> ${lesson.quiz[3]}`;
+      }
+    });
+    document.addEventListener("input",event=>{
+      const input=event.target;
+      if(input.type!=="range" || !input.dataset.param)return;
+      state[input.dataset.param]=Number(input.value);
+      if(input.dataset.param==="catRow") {state.catFlip=false;document.getElementById("catFlip").checked=false;}
+      document.getElementById(`${input.id}-output`).textContent=input.dataset.param==="catRow"?Number(input.value)+1:input.value;
+      const lesson=LESSONS.find(l=>l.id===state.lesson),lab=demo(lesson.id);
+      document.getElementById("visual").innerHTML=lab.plot+`<p class="chart-caption">${lab.caption}</p>`;
+      document.querySelector(".insight p").innerHTML=lab.insight;
+    });
+    document.addEventListener("change",event=>{
+      const input=event.target,key=input.dataset.param;
+      if(!key)return;
+      if(input.type==="checkbox")state[key]=input.checked;
+      else if(input.type==="range")state[key]=Number(input.value);
+      else state[key]=input.value;
+      if(key==="catRow")state.catFlip=false;
+      renderLab(input.id);
+    });
+    document.getElementById("lesson-picker").addEventListener("change",event=>go(event.target.value));
+    function updateThemeLabel() {
+      const dark=document.documentElement.dataset.theme==="dark";
+      document.getElementById("theme-toggle").textContent=dark?"Day view":"Night view";
+      document.getElementById("theme-toggle").setAttribute("aria-label",`Switch to ${dark?"day":"night"} view`);
+    }
+    document.getElementById("theme-toggle").addEventListener("click",()=>{
+      const theme=document.documentElement.dataset.theme==="dark"?"light":"dark";
+      document.documentElement.dataset.theme=theme;
+      const url=new URL(location.href);url.searchParams.set("scoutTheme",theme);history.replaceState(null,"",url);
+      updateThemeLabel();
+    });
+    window.addEventListener("popstate",route);
+    window.addEventListener("hashchange",route);
+    route();updateThemeLabel();
+  </script>
+</body>
+</html>
